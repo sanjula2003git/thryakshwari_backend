@@ -4,5 +4,4 @@ python-multipart
 pydantic
 python-dotenv
 PyMuPDF
-google-generativeai==0.3.2
-
+google-genai
