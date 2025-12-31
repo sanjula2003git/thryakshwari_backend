@@ -1,6 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from dotenv import load_dotenv
 
 
 
@@ -17,7 +18,7 @@ app.add_middleware(
 
 from google import genai
 import os
-
+load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     raise RuntimeError("GEMINI_API_KEY is not set")
@@ -70,11 +71,12 @@ async def query_document(request: QueryRequest):
     )
 
     response = client.models.generate_content(
-    model="gemini-1.0-pro",
+    model="models/gemini-2.0-flash",
     contents=prompt
 )
 
     return {"answer": response.text}
+
 
 
 
