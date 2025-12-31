@@ -2,8 +2,12 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import os
+import re
 from groq import Groq
 
+# --------------------
+# Load env vars
+# --------------------
 load_dotenv()
 
 # --------------------
@@ -12,7 +16,7 @@ load_dotenv()
 app = FastAPI(title="Thryakshwari API")
 
 # --------------------
-# Groq client
+# Groq client setup
 # --------------------
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 if not GROQ_API_KEY:
@@ -21,13 +25,27 @@ if not GROQ_API_KEY:
 client = Groq(api_key=GROQ_API_KEY)
 
 # --------------------
-# Temporary document store
+# In-memory document store
 # --------------------
 doc_store = {}
+MAX_CHARS = 8000  # prevent token overflow
 
+# --------------------
+# Models
+# --------------------
 class QueryRequest(BaseModel):
     doc_id: str
     query: str
+
+# --------------------
+# Utility: clean LLM output
+# --------------------
+def clean_text(text: str) -> str:
+    # Remove ASCII control characters
+    text = re.sub(r"[\x00-\x1F\x7F]", "", text)
+    # Remove internal LLM tokens
+    text = re.sub(r"<\|.*?\|>", "", text)
+    return text.strip()
 
 # --------------------
 # Upload endpoint
@@ -41,15 +59,20 @@ async def upload_document(file: UploadFile = File(...)):
     ):
         raise HTTPException(400, "Unsupported file type")
 
-    content = await file.read()
+    raw_bytes = await file.read()
+    text_content = raw_bytes.decode(errors="ignore")[:MAX_CHARS]
+
     doc_id = str(hash(file.filename))
 
     doc_store[doc_id] = {
         "filename": file.filename,
-        "content": content.decode(errors="ignore")
+        "content": text_content
     }
 
-    return {"doc_id": doc_id, "message": "Document uploaded successfully"}
+    return {
+        "doc_id": doc_id,
+        "message": "Document uploaded successfully"
+    }
 
 # --------------------
 # Query endpoint
@@ -62,7 +85,10 @@ async def query_document(request: QueryRequest):
     document_text = doc_store[request.doc_id]["content"]
 
     prompt = f"""
-Use the following document to answer the question.
+You are an AI assistant.
+
+Use the document below to answer the user's question.
+If the answer is not present, say "The document does not contain this information."
 
 DOCUMENT:
 {document_text}
@@ -79,8 +105,17 @@ QUESTION:
         temperature=0.3
     )
 
-    return {"answer": response.choices[0].message.content}
+    raw_answer = response.choices[0].message.content
+    clean_answer = clean_text(raw_answer)
 
+    return {"answer": clean_answer}
+
+# --------------------
+# Health check (optional)
+# --------------------
+@app.get("/")
+def root():
+    return {"status": "API is running"}
 
 
 
