@@ -69,13 +69,10 @@ async def query_document(request: QueryRequest):
         f"Question: {request.query}"
     )
 
-    response = model.generate_content([
-        {
-            "mime_type": doc["mime_type"],
-            "data": doc["content"]
-        },
-        prompt
-    ])
+    response = client.models.generate_content(
+    model="gemini-1.5-flash",
+    contents=prompt
+)
 
     return {"answer": response.text}
 
