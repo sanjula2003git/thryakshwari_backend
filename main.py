@@ -22,8 +22,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     raise RuntimeError("GEMINI_API_KEY is not set")
 
-client = genai.Client(api_key=GEMINI_API_KEY,
-                     api_version="v1")
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 doc_store = {}
 
@@ -76,6 +75,7 @@ async def query_document(request: QueryRequest):
 )
 
     return {"answer": response.text}
+
 
 
 
