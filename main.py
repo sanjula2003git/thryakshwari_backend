@@ -1,8 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import google.generativeai as genai
-import os
+
 
 
 app = FastAPI(title="Thryakshwari API")
@@ -16,12 +15,14 @@ app.add_middleware(
 )
 
 
+from google import genai
+import os
+
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     raise RuntimeError("GEMINI_API_KEY is not set")
 
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel("gemini-pro")
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 doc_store = {}
 
@@ -77,4 +78,5 @@ async def query_document(request: QueryRequest):
     ])
 
     return {"answer": response.text}
+
 
