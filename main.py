@@ -6,53 +6,39 @@ import re
 from groq import Groq
 import fitz  # PyMuPDF
 
-# --------------------
-# Load environment variables
-# --------------------
+
 load_dotenv()
 
-# --------------------
-# App setup
-# --------------------
+
 app = FastAPI(title="Thryakshwari API")
 
-# --------------------
-# Groq client setup
-# --------------------
+
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 if not GROQ_API_KEY:
     raise RuntimeError("GROQ_API_KEY is not set")
 
 client = Groq(api_key=GROQ_API_KEY)
 
-# --------------------
-# In-memory document store
-# --------------------
+
 doc_store = {}
 MAX_CHARS = 8000  # Prevent token overflow
 
-# --------------------
-# Request models
-# --------------------
+
 class QueryRequest(BaseModel):
     doc_id: str
     query: str
 
-# --------------------
-# Utility: Clean LLM output
-# --------------------
+
 def clean_text(text: str) -> str:
-    # Remove control characters
+    
     text = re.sub(r"[\x00-\x1F\x7F]", "", text)
-    # Remove internal LLM tokens
+    
     text = re.sub(r"<\|.*?\|>", "", text)
     return text.strip()
 
-# --------------------
-# Utility: Extract text from files
-# --------------------
+
 def extract_text(file_bytes: bytes, content_type: str) -> str:
-    # Handle PDFs properly
+    
     if content_type == "application/pdf":
         text = ""
         with fitz.open(stream=file_bytes, filetype="pdf") as doc:
@@ -60,16 +46,14 @@ def extract_text(file_bytes: bytes, content_type: str) -> str:
                 text += page.get_text()
         return text
 
-    # Handle text files
+    
     if content_type.startswith("text/"):
         return file_bytes.decode(errors="ignore")
 
-    # Fallback for other types (images etc.)
+    
     return ""
 
-# --------------------
-# Upload endpoint
-# --------------------
+
 @app.post("/upload")
 async def upload_document(file: UploadFile = File(...)):
     if not (
@@ -97,9 +81,7 @@ async def upload_document(file: UploadFile = File(...)):
         "message": "Document uploaded successfully"
     }
 
-# --------------------
-# Query endpoint
-# --------------------
+
 @app.post("/query")
 async def query_document(request: QueryRequest):
     if request.doc_id not in doc_store:
@@ -137,9 +119,8 @@ QUESTION:
 
     return {"answer": clean_answer}
 
-# --------------------
-# Health check
-# --------------------
+
 @app.get("/")
 def root():
     return {"status": "API is running"}
+
